@@ -11,8 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.files.models import FileMetadata
 from app.files.schemas import FileResponse
 from app.config import settings
-
-from app.files.tasks import broker
+from app.files.tasks import broker, exch
 
 
 async def upload_file_service(file: File, session: AsyncSession) -> FileResponse:
@@ -57,8 +56,8 @@ async def upload_file_service(file: File, session: AsyncSession) -> FileResponse
         "file_uuid": file_uuid,
         "file_extension": file_extension,
     }
-    await broker.publish(task_data, "file_upload")
 
+    await broker.publish(message=task_data, queue="upload_file_queue", exchange=exch)
     
     return FileResponse(**file_metadata.__dict__)
 
@@ -90,13 +89,16 @@ async def get_file_service(file_uuid: str, session: AsyncSession) -> StreamingRe
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Файл не был найден на сервере")
 
-    # Открытие файла для потоковой передачи
-    file = open(file_path, "rb")
-    
+
     # Определение типа содержимого
     media_type = file_metadata.file_type
 
+    # Открытие файла для потоковой передачи
+    def iterfile():  
+        with open(file_path, mode="rb") as file_like:  # 
+            yield from file_like  # 
+
     # Функция для потокового скачивания файла
-    response = StreamingResponse(file, media_type=media_type)
+    response = StreamingResponse(iterfile(), media_type=media_type)
 
     return response

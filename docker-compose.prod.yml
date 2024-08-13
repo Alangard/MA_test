@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: fastapi_app
+    command: >
+        bash -c "alembic upgrade head && 
+        uvicorn app.main:application --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+      - db
+    env_file:
+      - ./.env/.env.prod
+    networks:
+        api_network:
+
+  faststream:
+    build: .
+    container_name: faststream_app
+    command: python -m faststream run app.main:faststream_app
+    depends_on:
+      - rabbitmq
+      - db
+    env_file:
+      - ./.env/.env.prod
+    networks:
+        api_network:
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      - ./.env/.env.prod
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+        api_network:
+
+    
+
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    command: -p 1221
+    expose:
+      - 1221
+    env_file:
+      - ./.env/.env.prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+        api_network:
+
+volumes:
+  postgres_data:
+  rabbitmq-data:
+
+networks:
+  api_network:

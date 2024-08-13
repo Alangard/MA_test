@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from faststream import FastStream
 
 from app.config import settings
 from app.database import BaseModel, engine
 from app.files.router import router as files_router
 from app.files.tasks import broker, scheduler
+
 
 
 @asynccontextmanager
@@ -25,7 +27,7 @@ async def lifespan(app: FastAPI):
         # Создаём таблицы
         await connection.run_sync(BaseModel.metadata.create_all)
 
-    # Подключение RabbitMQ и запуск планировщика задач
+    #Подключение RabbitMQ и запуск планировщика задач
     await broker.connect()
     scheduler.start()
     
@@ -37,7 +39,7 @@ async def lifespan(app: FastAPI):
         await broker.disconnect()
         await engine.dispose()
 
+faststream_app = FastStream(broker)
 
 application = FastAPI(title="MA_test", lifespan=lifespan)
-
 application.include_router(files_router, prefix=settings.api_prefix)

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from app.config import settings
 
 
+
 class S3Client:
     def __init__(self):
         self.s3_client = aioboto3.client(
@@ -37,11 +38,12 @@ async def delete_old_files_local(directory: str, retention_period: timedelta):
             # Получаем время создания файла и преобразуем его в datetime
             file_created_timestamp = os.path.getctime(file_path)
             file_created_datetime = datetime.fromtimestamp(file_created_timestamp)
-            
+
             # Проверяем, если файл старше retention_period, удаляем его
             if (current_datetime - file_created_datetime) > retention_period:
                 try: 
                     os.remove(file_path)
+
                     print(f"Удален старый файл: {file_path}")
                 except Exception as e:
                     print(f"Ошибка при удалении файла {file_path}: {e}")
